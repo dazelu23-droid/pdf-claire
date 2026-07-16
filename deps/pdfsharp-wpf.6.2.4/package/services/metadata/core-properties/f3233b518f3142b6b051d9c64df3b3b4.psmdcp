@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<coreProperties xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://schemas.openxmlformats.org/package/2006/metadata/core-properties">
+  <dc:creator>PDFsharp Team</dc:creator>
+  <dc:description>PDFsharp is the Open Source library for creating and modifying PDF documents using .NET. It has an easy-to-use API that allows developers to generate or modify PDF files programmatically. PDFsharp can be used for various applications, including creating reports, invoices, and other types of documents.
+This package relies on Windows Presentation Foundation (WPF) and can be used under Windows only.
+See https://docs.pdfsharp.net for details.</dc:description>
+  <dc:identifier>PDFsharp-WPF</dc:identifier>
+  <version>6.2.4</version>
+  <keywords>PDFsharp PDF creation</keywords>
+  <lastModifiedBy>NuGet.Packaging, Version=7.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35;.NET 8.0</lastModifiedBy>
+</coreProperties>
