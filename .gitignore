@@ -1,0 +1,31 @@
+# Generated builds
+build/
+build-*/
+bin/
+obj/
+
+# Restored third-party packages
+deps/
+packages/
+
+# User and IDE state
+.vs/
+.vscode/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Test and temporary output
+TestResults/
+tmp/
+output/
+*.log
+
+# Editor project documents and local PDFs
+*.cpdf
+*.pdf
+
+# OS metadata
+.DS_Store
+Thumbs.db
