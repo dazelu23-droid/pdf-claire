@@ -17,14 +17,16 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\test.ps1
 Run the app:
 
 ```powershell
-.\build\ClairePdfEditor.exe
+.\build-current\ClairePdfEditor.exe
 ```
 
 Open a PDF directly:
 
 ```powershell
-.\build\ClairePdfEditor.exe "$env:USERPROFILE\Downloads\vibecoding-en-web.pdf"
+.\build-current\ClairePdfEditor.exe "$env:USERPROFILE\Downloads\vibecoding-en-web.pdf"
 ```
+
+Use `test.ps1 -OutputDirectory build-current -SkipBuild` to verify that an existing build contains every DLL required to open PDFs.
 
 The project uses the Windows C# compiler already included on this machine, so it does not require a separately installed .NET SDK.
 
