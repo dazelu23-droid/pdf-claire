@@ -10,7 +10,6 @@ using System.Windows.Ink;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using System.Windows.Automation;
 using Microsoft.Win32;
 
 namespace ClairePdfEditor
@@ -55,11 +54,6 @@ namespace ClairePdfEditor
         private StackPanel imageProperties;
         private TextBox imageWidthBox;
         private TextBox imageHeightBox;
-        private ScrollViewer documentScroll;
-        private StackPanel continuousPagesHost;
-        private readonly Dictionary<string, ImageSource> pdfPreviewCache = new Dictionary<string, ImageSource>(StringComparer.OrdinalIgnoreCase);
-        private InkCanvasEditingMode drawingMode = InkCanvasEditingMode.Ink;
-        private readonly EditorInteractionState interactionState = new EditorInteractionState();
 
         public EditorWindow() : this(null) { }
 
@@ -163,7 +157,7 @@ namespace ClairePdfEditor
             menu.Items.Add(annotate);
 
             var tools = MenuItem("_Tools", null);
-            tools.Items.Add(MenuItem("Edit _Text", delegate { SetTextSelectionMode(true); }));
+            tools.Items.Add(MenuItem("Edit _Text", delegate { editor.Focus(); }));
             tools.Items.Add(MenuItem("_Crop Image", delegate { CropImage(); }));
             tools.Items.Add(MenuItem("_Resize Image", delegate { ApplyImageSize(); }));
             tools.Items.Add(MenuItem("E_xtract Images...", delegate { ExtractImage(); }));
@@ -185,7 +179,7 @@ namespace ClairePdfEditor
         {
             var wrap = new WrapPanel { Margin = new Thickness(10, 8, 10, 8) };
             AddTool(wrap, "⇩", "Import", delegate { ImportDocument(); });
-            AddTool(wrap, "T", "Edit Text", delegate { SetTextSelectionMode(true); });
+            AddTool(wrap, "T", "Edit Text", delegate { editor.Focus(); });
             AddTool(wrap, "▰", "Highlight", delegate { Highlight(); });
             AddTool(wrap, "U", "Underline", delegate { Underline(); });
             AddTool(wrap, "▣", "Comment", delegate { AddComment(); });
@@ -242,10 +236,10 @@ namespace ClairePdfEditor
             Grid.SetColumn(pageList, 0);
             grid.Children.Add(pageList);
 
-            documentScroll = new ScrollViewer { HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Background = BrushFrom("#EDF0F4") };
-            continuousPagesHost = new StackPanel { Margin = new Thickness(40, 28, 40, 35), HorizontalAlignment = HorizontalAlignment.Center };
+            var scroll = new ScrollViewer { HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Background = BrushFrom("#EDF0F4") };
+            var canvasHost = new Grid { Margin = new Thickness(40, 28, 40, 35) };
             zoomTransform = new ScaleTransform(1, 1);
-            continuousPagesHost.LayoutTransform = zoomTransform;
+            canvasHost.LayoutTransform = zoomTransform;
             pageSheet = new Border { Width = 780, MinHeight = 900, Background = Brushes.White, BorderBrush = Border, BorderThickness = new Thickness(1), Padding = new Thickness(58, 42, 58, 42), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Top };
             pageRotation = new RotateTransform(0);
             pageSheet.LayoutTransform = pageRotation;
@@ -272,7 +266,7 @@ namespace ClairePdfEditor
             signatureText = new TextBlock { HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(0, 0, 10, 35), FontSize = 32, FontFamily = new FontFamily("Segoe Script"), FontStyle = FontStyles.Italic, Foreground = BrushFrom("#7D24A8") };
             content.Children.Add(signatureText);
 
-            ink = new InkCanvas { Background = Brushes.Transparent, Visibility = Visibility.Visible, IsHitTestVisible = false, EditingMode = InkCanvasEditingMode.Ink };
+            ink = new InkCanvas { Background = Brushes.Transparent, Visibility = Visibility.Collapsed, EditingMode = InkCanvasEditingMode.Ink };
             ink.DefaultDrawingAttributes.Color = Colors.Blue;
             ink.DefaultDrawingAttributes.Width = 2;
             ink.DefaultDrawingAttributes.Height = 2;
@@ -289,10 +283,10 @@ namespace ClairePdfEditor
             Grid.SetRow(footer, 2);
             page.Children.Add(footer);
             pageSheet.Child = page;
-            AutomationProperties.SetName(pageSheet, "Active editable page");
-            documentScroll.Content = continuousPagesHost;
-            Grid.SetColumn(documentScroll, 1);
-            grid.Children.Add(documentScroll);
+            canvasHost.Children.Add(pageSheet);
+            scroll.Content = canvasHost;
+            Grid.SetColumn(scroll, 1);
+            grid.Children.Add(scroll);
 
             var right = BuildPropertiesPanel();
             Grid.SetColumn(right, 2);
@@ -367,75 +361,11 @@ namespace ClairePdfEditor
             signatureText.Text = page.Signature;
             LoadInk(page);
             LoadPageImage(page);
-            SetTextSelectionMode(false);
-            RebuildContinuousPages();
             RefreshComments();
             pageList.SelectedIndex = project.CurrentPage;
             statusText.Text = "Page " + (project.CurrentPage + 1) + " of " + project.Pages.Count + "   •   " + project.Title;
             Title = project.Title + " — Claire PDF Editor";
             loading = false;
-        }
-
-        private void RebuildContinuousPages()
-        {
-            if (continuousPagesHost == null) return;
-            continuousPagesHost.Children.Clear();
-            for (int i = 0; i < project.Pages.Count; i++)
-            {
-                int pageIndex = i;
-                if (i == project.CurrentPage)
-                {
-                    pageSheet.Margin = new Thickness(0, 0, 0, 26);
-                    AutomationProperties.SetName(pageSheet, "Page " + (i + 1) + " editable");
-                    continuousPagesHost.Children.Add(pageSheet);
-                }
-                else
-                {
-                    Border preview = BuildContinuousPagePreview(project.Pages[i], i);
-                    preview.MouseLeftButtonDown += delegate
-                    {
-                        if (loading) return;
-                        CapturePageState();
-                        LoadPage(pageIndex);
-                        pageSheet.BringIntoView();
-                    };
-                    continuousPagesHost.Children.Add(preview);
-                }
-            }
-        }
-
-        private Border BuildContinuousPagePreview(EditorPage source, int pageIndex)
-        {
-            var card = new Border { Width = 780, Height = 900, Background = Brushes.White, BorderBrush = Border, BorderThickness = new Thickness(1), Margin = new Thickness(0, 0, 0, 26), Padding = new Thickness(28), Cursor = Cursors.Hand, ToolTip = "Click to edit page " + (pageIndex + 1) };
-            AutomationProperties.SetName(card, "Page " + (pageIndex + 1) + " preview");
-            var grid = new Grid();
-            ImageSource previewSource = GetPdfPreview(source);
-            if (previewSource != null)
-                grid.Children.Add(new Image { Source = previewSource, Stretch = Stretch.Uniform, IsHitTestVisible = false });
-            else
-                grid.Children.Add(new TextBlock { Text = source.Body, TextWrapping = TextWrapping.Wrap, Foreground = Navy, FontSize = 14, Margin = new Thickness(32) });
-            grid.Children.Add(new TextBlock { Text = "Page " + (pageIndex + 1), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Bottom, Foreground = Brushes.Gray, Background = Brushes.White, Padding = new Thickness(8, 3, 8, 3) });
-            card.Child = grid;
-            return card;
-        }
-
-        private ImageSource GetPdfPreview(EditorPage source)
-        {
-            if (String.IsNullOrEmpty(source.SourcePdfPath) || !File.Exists(source.SourcePdfPath)) return null;
-            string key = source.SourcePdfPath + "|" + source.SourcePdfPageIndex;
-            ImageSource cached;
-            if (pdfPreviewCache.TryGetValue(key, out cached)) return cached;
-            string rendered = null;
-            try
-            {
-                rendered = PdfRenderService.RenderPage(source.SourcePdfPath, source.SourcePdfPageIndex);
-                var bitmap = new BitmapImage();
-                bitmap.BeginInit(); bitmap.CacheOption = BitmapCacheOption.OnLoad; bitmap.UriSource = new Uri(rendered); bitmap.EndInit(); bitmap.Freeze();
-                pdfPreviewCache[key] = bitmap;
-                return bitmap;
-            }
-            catch { return null; }
-            finally { if (!String.IsNullOrEmpty(rendered) && File.Exists(rendered)) try { File.Delete(rendered); } catch { } }
         }
 
         private void SavePageTextAndLoad(int index)
@@ -503,9 +433,8 @@ namespace ClairePdfEditor
             try
             {
                 var opened = new EditorProject { Title = Path.GetFileName(path) };
-                List<string> extractedPages = PdfTextExtractionService.ExtractAllPages(path);
-                int count = extractedPages.Count;
-                for (int pageIndex = 0; pageIndex < count; pageIndex++) AddLinkedPdfPage(opened, path, pageIndex, count, extractedPages[pageIndex]);
+                int count = PdfProjectExporter.GetPageCount(path);
+                for (int pageIndex = 0; pageIndex < count; pageIndex++) AddLinkedPdfPage(opened, path, pageIndex, count);
                 opened.CurrentPage = 0;
                 project = opened;
                 projectPath = null;
@@ -528,14 +457,11 @@ namespace ClairePdfEditor
             catch (Exception ex) { Error("Could not open the text document.\n" + ex.Message); }
         }
 
-        private static void AddLinkedPdfPage(EditorProject destination, string path, int pageIndex, int count, string extractedText)
+        private static void AddLinkedPdfPage(EditorProject destination, string path, int pageIndex, int count)
         {
-            string fallback = "[Linked PDF page " + (pageIndex + 1) + " of " + count + "]\n\n" + Path.GetFileName(path) + "\n\nNo selectable text was found on this page. You can still draw, add images, comments, or a signature.";
-            string editableText = String.IsNullOrWhiteSpace(extractedText) ? fallback : extractedText;
-            destination.AddPage(editableText);
+            destination.AddPage("[Linked PDF page " + (pageIndex + 1) + " of " + count + "]\n\n" + Path.GetFileName(path) + "\n\nThe original page will be preserved when this project is exported to PDF. Add text, images, drawings, comments, or a signature in the editor.");
             destination.ActivePage.SourcePdfPath = path;
             destination.ActivePage.SourcePdfPageIndex = pageIndex;
-            destination.ActivePage.OriginalPdfText = editableText;
             destination.ActivePage.ShowPageNumber = false;
         }
 
@@ -573,10 +499,9 @@ namespace ClairePdfEditor
                 {
                     try
                     {
-                        List<string> extractedPages = PdfTextExtractionService.ExtractAllPages(path);
-                        int count = extractedPages.Count;
+                        int count = PdfProjectExporter.GetPageCount(path);
                         for (int pageIndex = 0; pageIndex < count; pageIndex++)
-                            AddLinkedPdfPage(project, path, pageIndex, count, extractedPages[pageIndex]);
+                            AddLinkedPdfPage(project, path, pageIndex, count);
                     }
                     catch (Exception ex) { Error("Could not import " + Path.GetFileName(path) + ".\n" + ex.Message); }
                 }
@@ -665,7 +590,11 @@ namespace ClairePdfEditor
 
         private void LoadEditorContent(EditorPage page)
         {
-            editor.Background = !String.IsNullOrEmpty(page.SourcePdfPath) ? BrushFrom("#F2FFFFFF") : Brushes.Transparent;
+            if (!String.IsNullOrEmpty(page.SourcePdfPath) && (page.Body ?? String.Empty).StartsWith("[Linked PDF page", StringComparison.Ordinal))
+            {
+                editor.Document = new FlowDocument { PagePadding = new Thickness(0) };
+                return;
+            }
             if (!String.IsNullOrEmpty(page.RichTextData))
             {
                 try
@@ -712,38 +641,18 @@ namespace ClairePdfEditor
 
         private void ToggleDrawing()
         {
-            if (interactionState.DrawingActive) SetTextSelectionMode(true);
-            else EnableInk(drawingMode);
+            ink.Visibility = ink.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible;
+            if (ink.Visibility == Visibility.Visible) ink.Focus();
         }
 
         private void EnableInk(InkCanvasEditingMode mode)
         {
-            drawingMode = mode;
-            interactionState.UseDrawing();
             ink.Visibility = Visibility.Visible;
             ink.EditingMode = mode;
-            ink.IsHitTestVisible = true;
-            editor.IsHitTestVisible = false;
-            ink.Focus();
-            statusText.Text = mode == InkCanvasEditingMode.EraseByStroke ? "Eraser active — click Draw to return to text selection" : "Drawing active — click Draw again to select text";
-        }
-
-        private void SetTextSelectionMode(bool focusEditor)
-        {
-            interactionState.UseTextSelection();
-            ink.Visibility = Visibility.Visible;
-            ink.IsHitTestVisible = false;
-            editor.IsHitTestVisible = true;
-            if (focusEditor)
-            {
-                editor.Focus();
-                statusText.Text = "Text selection active — drawings remain visible";
-            }
         }
 
         private void Search()
         {
-            SetTextSelectionMode(false);
             string query = searchBox.Text;
             var hits = project.Search(query).ToList();
             if (hits.Count == 0) { statusText.Text = "No results for “" + query + "”"; return; }
@@ -881,7 +790,6 @@ namespace ClairePdfEditor
             content.Children.Add(new TextBlock { Text = glyph, FontSize = 25, HorizontalAlignment = HorizontalAlignment.Center, FontWeight = FontWeights.SemiBold });
             content.Children.Add(new TextBlock { Text = label, FontSize = 11, HorizontalAlignment = HorizontalAlignment.Center });
             var button = new Button { Content = content, MinWidth = 72, Height = 67, Margin = new Thickness(2), Padding = new Thickness(8, 4, 8, 4), Background = primary ? Blue : Brushes.Transparent, Foreground = primary ? Brushes.White : Navy, BorderBrush = primary ? Blue : Brushes.Transparent, Cursor = Cursors.Hand };
-            AutomationProperties.SetName(button, label);
             button.Click += action;
             panel.Children.Add(button);
         }

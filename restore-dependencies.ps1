@@ -16,13 +16,6 @@ $packages = @(
     @{ Id = 'system.threading.tasks.extensions'; Version = '4.5.4' },
     @{ Id = 'microsoft.bcl.asyncinterfaces'; Version = '8.0.0' },
     @{ Id = 'system.numerics.vectors'; Version = '4.5.0' }
-    ,@{ Id = 'pdfpig'; Version = '0.1.13' }
-    ,@{ Id = 'microsoft.bcl.hashcode'; Version = '6.0.0' }
-    ,@{ Id = 'system.memory'; Version = '4.6.0' }
-    ,@{ Id = 'system.valuetuple'; Version = '4.5.0' }
-    ,@{ Id = 'system.buffers'; Version = '4.6.0' }
-    ,@{ Id = 'system.numerics.vectors'; Version = '4.6.0' }
-    ,@{ Id = 'system.runtime.compilerservices.unsafe'; Version = '6.1.0' }
 )
 
 foreach ($package in $packages) {

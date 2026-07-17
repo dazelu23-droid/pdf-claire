@@ -7,7 +7,10 @@ New-Item -ItemType Directory -Force -Path $out | Out-Null
 $csc = 'C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe'
 if (-not (Test-Path -LiteralPath $csc)) { throw 'The Windows C# compiler was not found.' }
 
-& (Join-Path $root 'restore-dependencies.ps1')
+$pdfSharpProbe = Join-Path $root 'deps\pdfsharp-wpf.6.2.4\lib\net462\PdfSharp-wpf.dll'
+if (-not (Test-Path -LiteralPath $pdfSharpProbe)) {
+    & (Join-Path $root 'restore-dependencies.ps1')
+}
 
 & $csc /nologo /target:library /out:"$out\ClairePdfEditor.Core.dll" /reference:System.Web.Extensions.dll "$root\PdfEditor.Core.cs"
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -27,16 +30,12 @@ Copy-Item -LiteralPath (Join-Path $root 'deps\microsoft.extensions.logging.abstr
 Copy-Item -LiteralPath (Join-Path $root 'deps\microsoft.extensions.dependencyinjection.abstractions.8.0.2\lib\net462\Microsoft.Extensions.DependencyInjection.Abstractions.dll') -Destination $out -Force
 Copy-Item -LiteralPath (Join-Path $root 'deps\microsoft.bcl.asyncinterfaces.8.0.0\lib\net462\Microsoft.Bcl.AsyncInterfaces.dll') -Destination $out -Force
 Copy-Item -LiteralPath (Join-Path $root 'deps\system.security.cryptography.pkcs.8.0.1\lib\net462\System.Security.Cryptography.Pkcs.dll') -Destination $out -Force
-Copy-Item -LiteralPath (Join-Path $root 'deps\system.buffers.4.6.0\lib\net462\System.Buffers.dll') -Destination $out -Force
-Copy-Item -LiteralPath (Join-Path $root 'deps\system.memory.4.6.0\lib\net462\System.Memory.dll') -Destination $out -Force
-Copy-Item -LiteralPath (Join-Path $root 'deps\system.runtime.compilerservices.unsafe.6.1.0\lib\net462\System.Runtime.CompilerServices.Unsafe.dll') -Destination $out -Force
+Copy-Item -LiteralPath (Join-Path $root 'deps\system.buffers.4.5.1\lib\net461\System.Buffers.dll') -Destination $out -Force
+Copy-Item -LiteralPath (Join-Path $root 'deps\system.memory.4.5.5\lib\net461\System.Memory.dll') -Destination $out -Force
+Copy-Item -LiteralPath (Join-Path $root 'deps\system.runtime.compilerservices.unsafe.6.0.0\lib\net461\System.Runtime.CompilerServices.Unsafe.dll') -Destination $out -Force
 Copy-Item -LiteralPath (Join-Path $root 'deps\system.threading.tasks.extensions.4.5.4\lib\net461\System.Threading.Tasks.Extensions.dll') -Destination $out -Force
-Copy-Item -LiteralPath (Join-Path $root 'deps\system.numerics.vectors.4.6.0\lib\net462\System.Numerics.Vectors.dll') -Destination $out -Force
-Copy-Item -LiteralPath (Join-Path $root 'deps\microsoft.bcl.hashcode.6.0.0\lib\net462\Microsoft.Bcl.HashCode.dll') -Destination $out -Force
-Copy-Item -LiteralPath (Join-Path $root 'deps\system.valuetuple.4.5.0\lib\net461\System.ValueTuple.dll') -Destination $out -Force
-$pdfPigDir = Join-Path $root 'deps\pdfpig.0.1.13\lib\net462'
-Get-ChildItem -LiteralPath $pdfPigDir -Filter '*.dll' | Copy-Item -Destination $out -Force
-& $csc /nologo /target:library /out:"$out\ClairePdfEditor.PdfExport.dll" /reference:"$out\ClairePdfEditor.Core.dll" /reference:"$out\PdfSharp-wpf.dll" /reference:"$out\UglyToad.PdfPig.dll" /reference:"$out\UglyToad.PdfPig.DocumentLayoutAnalysis.dll" /reference:"$out\UglyToad.PdfPig.Package.dll" /reference:"$out\System.Memory.dll" /reference:"$out\Microsoft.Bcl.HashCode.dll" /reference:"$out\System.ValueTuple.dll" /reference:"$windowsBase" /reference:"$presentationCore" "$root\PdfEditor.PdfExport.cs"
+Copy-Item -LiteralPath (Join-Path $root 'deps\system.numerics.vectors.4.5.0\lib\net46\System.Numerics.Vectors.dll') -Destination $out -Force
+& $csc /nologo /target:library /out:"$out\ClairePdfEditor.PdfExport.dll" /reference:"$out\ClairePdfEditor.Core.dll" /reference:"$out\PdfSharp-wpf.dll" /reference:"$windowsBase" /reference:"$presentationCore" "$root\PdfEditor.PdfExport.cs"
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 & $csc /nologo /target:winexe /out:"$out\ClairePdfEditor.exe" /reference:"$out\ClairePdfEditor.Core.dll" /reference:"$out\ClairePdfEditor.PdfExport.dll" /reference:"$windowsBase" /reference:"$presentationCore" /reference:"$presentationFramework" /reference:"$systemXaml" "$root\PdfEditor.App.cs"

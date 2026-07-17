@@ -123,7 +123,6 @@ namespace ClairePdfEditor
         public string Signature { get; set; }
         public string SourcePdfPath { get; set; }
         public int SourcePdfPageIndex { get; set; }
-        public string OriginalPdfText { get; set; }
 
         public EditorPage()
         {
@@ -137,7 +136,6 @@ namespace ClairePdfEditor
             Signature = String.Empty;
             SourcePdfPath = String.Empty;
             SourcePdfPageIndex = -1;
-            OriginalPdfText = String.Empty;
             ImageWidth = 280;
             ImageHeight = 180;
         }
@@ -156,16 +154,4 @@ namespace ClairePdfEditor
         public int Index { get; set; }
         public int Length { get; set; }
     }
-
-    public sealed class EditorInteractionState
-    {
-        public bool DrawingActive { get; private set; }
-        public bool InkVisible { get { return true; } }
-        public bool InkReceivesInput { get { return DrawingActive; } }
-        public bool TextReceivesInput { get { return !DrawingActive; } }
-
-        public void UseDrawing() { DrawingActive = true; }
-        public void UseTextSelection() { DrawingActive = false; }
-    }
-
 }
