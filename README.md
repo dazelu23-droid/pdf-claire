@@ -31,11 +31,13 @@ The project uses the Windows C# compiler already included on this machine, so it
 ## Implemented interactions
 
 - Top menus and nested File > Import PDF submenu
-- Editable document text, highlighting, underlining, comments, and search
+- Editable document text, highlighting, underlining, comments, and search; imported PDFs use PdfPig reading-order text extraction
 - Image import, sizing, non-destructive crop controls, and image extraction
 - Freehand drawing with pen/eraser modes and clear action
+- Ink remains visible in text-selection mode; Draw toggles input between the ink layer and editable text
 - Typed digital signature insertion
 - Page thumbnails, page navigation, left/right rotation, headers, footers, and page numbers
+- Continuous vertical page previews support normal mouse-wheel scrolling through the complete document
 - Linked PDF import with real page previews when Poppler `pdftoppm` is available, source-page-preserving export with ink overlays, rendered-page extraction, and `.cpdf` project save including rich-text formatting, drawing strokes, comments, images, and signatures
 
 ## PDF engine boundary

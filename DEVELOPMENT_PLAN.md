@@ -53,3 +53,10 @@ These items require a real PDF SDK rather than additional UI work:
 - Cryptographic certificate-backed signatures
 - OCR, scanner provider integration, and AcroForm authoring
 - Large-document virtualization and conformance testing across real PDF corpora
+
+## July 2026 interaction fixes
+
+- Drawing and text selection now share the same persistent ink layer. Leaving Draw mode disables ink hit-testing instead of hiding strokes.
+- Imported PDFs use PdfPig reading-order extraction to populate an editable text layer while retaining the original rendered page and source PDF.
+- The document workspace is a continuous vertical page stack. Mouse-wheel scrolling moves through every page without thumbnail navigation; clicking a preview only selects that page for editing.
+- The 16-page `vibecoding-en-web.pdf` regression fixture was verified for parsing, text extraction, rendering, continuous scrolling, and draw/text mode switching.

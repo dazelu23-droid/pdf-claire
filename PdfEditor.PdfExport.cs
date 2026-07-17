@@ -6,6 +6,7 @@ using PdfSharp.Drawing;
 using PdfSharp.Pdf;
 using PdfSharp.Pdf.IO;
 using System.Windows.Ink;
+using UglyToad.PdfPig.DocumentLayoutAnalysis.TextExtractor;
 
 namespace ClairePdfEditor
 {
@@ -70,7 +71,7 @@ namespace ClairePdfEditor
 
             double y = 65;
             string body = source.Body ?? String.Empty;
-            if (imported && body.StartsWith("[Linked PDF page", StringComparison.Ordinal)) body = String.Empty;
+            if (imported && (body.StartsWith("[Linked PDF page", StringComparison.Ordinal) || String.Equals(body, source.OriginalPdfText, StringComparison.Ordinal))) body = String.Empty;
             string[] lines = body.Replace("\r", String.Empty).Split('\n');
             foreach (string raw in lines)
             {
@@ -214,5 +215,22 @@ namespace ClairePdfEditor
         }
 
         private static string Quote(string value) { return "\"" + value.Replace("\"", String.Empty) + "\""; }
+    }
+
+    public static class PdfTextExtractionService
+    {
+        public static List<string> ExtractAllPages(string pdfPath)
+        {
+            var result = new List<string>();
+            using (UglyToad.PdfPig.PdfDocument document = UglyToad.PdfPig.PdfDocument.Open(pdfPath))
+            {
+                foreach (UglyToad.PdfPig.Content.Page page in document.GetPages())
+                {
+                    string text = ContentOrderTextExtractor.GetText(page);
+                    result.Add((text ?? String.Empty).Trim());
+                }
+            }
+            return result;
+        }
     }
 }

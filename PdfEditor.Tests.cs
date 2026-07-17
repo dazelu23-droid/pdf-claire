@@ -28,6 +28,12 @@ internal static class PdfEditorTests
         Check(project.Search("project").Count() >= 2, "search is case-insensitive and returns multiple hits");
         Check(project.Search("").Count() == 0, "empty search is safe");
 
+        var interaction = new EditorInteractionState();
+        interaction.UseDrawing();
+        Check(interaction.DrawingActive && interaction.InkVisible && interaction.InkReceivesInput && !interaction.TextReceivesInput, "drawing mode routes input to visible ink");
+        interaction.UseTextSelection();
+        Check(!interaction.DrawingActive && interaction.InkVisible && !interaction.InkReceivesInput && interaction.TextReceivesInput, "text selection keeps existing ink visible");
+
         project.AddPage("Imported page");
         Check(project.Pages.Count == 4 && project.CurrentPage == 3, "add page activates the new page");
 
@@ -76,6 +82,9 @@ internal static class PdfEditorTests
         {
             int realPages = PdfProjectExporter.GetPageCount(realPdf);
             Check(realPages > 0, "vibecoding PDF opens through the PDF engine");
+            var extractedPages = PdfTextExtractionService.ExtractAllPages(realPdf);
+            Check(extractedPages.Count == realPages, "vibecoding PDF text extraction covers every page");
+            Check(extractedPages.Any(pageText => pageText.Length > 100), "vibecoding PDF exposes editable page text");
             if (PdfRenderService.IsAvailable)
             {
                 string realPreview = PdfRenderService.RenderPage(realPdf, 0);
